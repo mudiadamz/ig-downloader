@@ -214,8 +214,18 @@
       cursor: pointer;
       text-decoration: none;
       transition: opacity 0.15s;
+      position: relative;
+      overflow: hidden;
     }
     .btn-save:hover { opacity: 0.85; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-save .progress-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      background: rgba(255,255,255,0.15);
+      width: 0%;
+      transition: width 0.15s;
+    }
 
     .footer {
       text-align: center;
@@ -253,7 +263,7 @@
             <div class="meta-title" id="title"></div>
             <div class="meta-sub" id="sub"></div>
           </div>
-          <a class="btn-save" id="saveLink" href="#" target="_blank" rel="noopener">Save ↓</a>
+          <button class="btn-save" id="saveBtn"><span id="saveText">Save ↓</span><div class="progress-bar" id="progressBar"></div></button>
         </div>
       </div>
     </div>
@@ -271,7 +281,12 @@
     const preview = document.getElementById('preview');
     const titleEl = document.getElementById('title');
     const subEl = document.getElementById('sub');
-    const saveLink = document.getElementById('saveLink');
+    const saveBtn = document.getElementById('saveBtn');
+    const saveText = document.getElementById('saveText');
+    const progressBar = document.getElementById('progressBar');
+
+    let currentVideoUrl = '';
+    let currentFilename = 'instagram_video.mp4';
 
     const IG_RE = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[\w-]+/;
 
@@ -342,10 +357,63 @@
       if (data.filesize) parts.push(formatBytes(data.filesize));
       subEl.textContent = parts.join(' · ') || '';
 
-      saveLink.href = data.url;
+      currentVideoUrl = data.url;
+      const name = (data.uploader || 'instagram').replace(/[^a-zA-Z0-9_-]/g, '_');
+      currentFilename = name + '.mp4';
+
+      saveBtn.disabled = false;
+      saveText.textContent = 'Save ↓';
+      progressBar.style.width = '0%';
 
       resultEl.classList.add('show');
     }
+
+    saveBtn.addEventListener('click', async () => {
+      if (!currentVideoUrl || saveBtn.disabled) return;
+      saveBtn.disabled = true;
+      saveText.textContent = 'Downloading…';
+      progressBar.style.width = '0%';
+
+      try {
+        const resp = await fetch(currentVideoUrl);
+        if (!resp.ok) throw new Error('Fetch failed');
+
+        const contentLength = +resp.headers.get('Content-Length') || 0;
+        const reader = resp.body.getReader();
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.length;
+          if (contentLength) {
+            const pct = Math.min(100, Math.round((received / contentLength) * 100));
+            progressBar.style.width = pct + '%';
+            saveText.textContent = pct + '%';
+          }
+        }
+
+        const blob = new Blob(chunks, { type: 'video/mp4' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = currentFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+        saveText.textContent = 'Saved ✓';
+        setTimeout(() => { saveText.textContent = 'Save ↓'; }, 2000);
+      } catch {
+        window.open(currentVideoUrl, '_blank');
+        saveText.textContent = 'Save ↓';
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
 
     function formatDuration(s) {
       const m = Math.floor(s / 60);
