@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IG Video Downloader</title>
+  <title>IG & TikTok Video Downloader</title>
   <style>
     :root {
       --bg: #000;
@@ -238,13 +238,13 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>IG Video Downloader</h1>
-      <p>Paste an Instagram post or reel link to download</p>
+      <h1>IG & TikTok Downloader</h1>
+      <p>Paste an Instagram post, reel, or TikTok video link</p>
     </div>
 
     <div class="card">
       <div class="input-group">
-        <input type="text" id="url" placeholder="https://instagram.com/p/..." autocomplete="off" spellcheck="false">
+        <input type="text" id="url" placeholder="Instagram or TikTok URL…" autocomplete="off" spellcheck="false">
         <button class="btn-paste" id="pasteBtn">Paste</button>
       </div>
 
@@ -286,9 +286,26 @@
     const progressBar = document.getElementById('progressBar');
 
     let currentVideoUrl = '';
-    let currentFilename = 'instagram_video.mp4';
+    let currentFilename = 'video.mp4';
 
-    const IG_RE = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[\w-]+/;
+    const IG_RE = /^https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[\w-]+$/;
+    const TIKTOK_RE = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/video\/\d+$|^https?:\/\/(?:vm|vt)\.tiktok\.com\/[\w-]+\/?$|^https?:\/\/(?:www\.|m\.)?tiktok\.com\/t\/[\w-]+\/?$/;
+
+    function normalizeUrlInput(u) {
+      let s = u.trim();
+      const q = s.indexOf('?');
+      const h = s.indexOf('#');
+      let end = s.length;
+      if (q >= 0) end = Math.min(end, q);
+      if (h >= 0) end = Math.min(end, h);
+      s = s.slice(0, end).replace(/\/$/, '');
+      return s;
+    }
+
+    function isSupportedUrl(raw) {
+      const u = normalizeUrlInput(raw);
+      return IG_RE.test(u) || TIKTOK_RE.test(u);
+    }
 
     pasteBtn.addEventListener('click', async () => {
       try {
@@ -311,8 +328,8 @@
       hideError();
       resultEl.classList.remove('show');
 
-      if (!IG_RE.test(url)) {
-        showError('Please enter a valid Instagram post or reel URL.');
+      if (!isSupportedUrl(url)) {
+        showError('Please enter a valid Instagram post/reel or TikTok video URL.');
         return;
       }
 
@@ -350,7 +367,7 @@
       preview.poster = data.thumbnail || '';
       preview.load();
 
-      titleEl.textContent = data.uploader || 'Instagram Video';
+      titleEl.textContent = data.uploader || 'Video';
 
       const parts = [];
       if (data.duration) parts.push(formatDuration(data.duration));
@@ -358,7 +375,7 @@
       subEl.textContent = parts.join(' · ') || '';
 
       currentVideoUrl = data.url;
-      const name = (data.uploader || 'instagram').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const name = (data.uploader || 'video').replace(/[^a-zA-Z0-9_-]/g, '_');
       currentFilename = name + '.mp4';
 
       saveBtn.disabled = false;

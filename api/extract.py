@@ -8,6 +8,25 @@ IG_RE = re.compile(
     r"https?://(?:www\.)?instagram\.com/(?:p|reel|reels|tv)/[\w-]+"
 )
 
+TIKTOK_RE = re.compile(
+    r"https?://(?:www\.|m\.)?tiktok\.com/@[\w.-]+/video/\d+"
+    r"|https?://(?:vm|vt)\.tiktok\.com/[\w-]+"
+    r"|https?://(?:www\.|m\.)?tiktok\.com/t/[\w-]+"
+)
+
+
+def normalize_url(url: str) -> str:
+    u = url.strip()
+    for sep in ("?", "#"):
+        if sep in u:
+            u = u.split(sep, 1)[0]
+    return u.rstrip("/")
+
+
+def is_supported_url(url: str) -> bool:
+    u = normalize_url(url)
+    return bool(IG_RE.match(u)) or bool(TIKTOK_RE.match(u))
+
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -18,8 +37,11 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "Invalid JSON body"})
 
         url = body.get("url", "").strip()
-        if not IG_RE.match(url):
-            return self._json(400, {"error": "Invalid Instagram URL"})
+        if not is_supported_url(url):
+            return self._json(
+                400,
+                {"error": "Invalid URL. Use an Instagram post/reel or TikTok video link."},
+            )
 
         opts = {
             "quiet": True,

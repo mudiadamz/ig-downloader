@@ -14,10 +14,30 @@ IG_URL_PATTERN = re.compile(
     r"(?:p|reel|reels|tv)/([A-Za-z0-9_-]+)"
 )
 
+TIKTOK_URL_PATTERN = re.compile(
+    r"https?://(?:www\.|m\.)?tiktok\.com/@[\w.-]+/video/\d+"
+    r"|https?://(?:vm|vt)\.tiktok\.com/[\w-]+"
+    r"|https?://(?:www\.|m\.)?tiktok\.com/t/[\w-]+"
+)
+
+
+def normalize_url_for_validate(url: str) -> str:
+    u = url.strip()
+    for sep in ("?", "#"):
+        if sep in u:
+            u = u.split(sep, 1)[0]
+    return u.rstrip("/")
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Download Instagram videos")
-    parser.add_argument("urls", nargs="+", help="Instagram post/reel URLs")
+    parser = argparse.ArgumentParser(
+        description="Download Instagram and TikTok videos",
+    )
+    parser.add_argument(
+        "urls",
+        nargs="+",
+        help="Instagram post/reel or TikTok video URLs",
+    )
     parser.add_argument(
         "-o", "--output-dir",
         default=DOWNLOADS_DIR,
@@ -32,7 +52,11 @@ def parse_args():
 
 
 def validate_url(url: str) -> bool:
-    return IG_URL_PATTERN.search(url) is not None
+    u = normalize_url_for_validate(url)
+    return (
+        IG_URL_PATTERN.search(u) is not None
+        or TIKTOK_URL_PATTERN.search(u) is not None
+    )
 
 
 def download_video(url: str, output_dir: str, quiet: bool = False) -> str | None:
@@ -72,7 +96,7 @@ def main():
 
     invalid = [u for u in args.urls if not validate_url(u)]
     if invalid:
-        print("[ERROR] Invalid Instagram URL(s):", file=sys.stderr)
+        print("[ERROR] Invalid URL(s) — need Instagram or TikTok video links:", file=sys.stderr)
         for u in invalid:
             print(f"  - {u}", file=sys.stderr)
         sys.exit(1)
