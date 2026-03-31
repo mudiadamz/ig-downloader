@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IG Video Downloader</title>
+  <style>
+    :root {
+      --bg: #000;
+      --surface: #111;
+      --surface-alt: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --text: #f5f5f5;
+      --text-dim: #777;
+      --radius: 14px;
+      --gradient: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+      --error: #ef4444;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    /* Input group */
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+    .input-group input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input::placeholder { color: #555; }
+    .input-group input:focus { border-color: rgba(221,42,123,0.5); }
+
+    .btn-paste {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-dim);
+      padding: 0 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-paste:hover { background: #222; color: var(--text); }
+
+    /* Download button */
+    .btn-download {
+      width: 100%;
+      margin-top: 14px;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: var(--gradient);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-download:hover { opacity: 0.9; }
+    .btn-download:active { transform: scale(0.98); }
+    .btn-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 10px;
+      color: var(--error);
+      font-size: 13px;
+      display: none;
+    }
+    .error.show { display: block; }
+
+    /* Result */
+    .result {
+      margin-top: 16px;
+      display: none;
+      animation: fadeUp 0.3s ease;
+    }
+    .result.show { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result .thumb-wrap {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg);
+      aspect-ratio: 16/9;
+    }
+    .result video,
+    .result img.thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+
+    .result .meta {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .result .meta-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .result .meta-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .result .meta-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .btn-save {
+      flex-shrink: 0;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 8px;
+      background: var(--gradient);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn-save:hover { opacity: 0.85; }
+
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 12px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>IG Video Downloader</h1>
+      <p>Paste an Instagram post or reel link to download</p>
+    </div>
+
+    <div class="card">
+      <div class="input-group">
+        <input type="text" id="url" placeholder="https://instagram.com/p/..." autocomplete="off" spellcheck="false">
+        <button class="btn-paste" id="pasteBtn">Paste</button>
+      </div>
+
+      <button class="btn-download" id="downloadBtn">
+        <span id="btnText">Get Video</span>
+      </button>
+
+      <div class="error" id="error"></div>
+
+      <div class="result" id="result">
+        <div class="thumb-wrap">
+          <video id="preview" controls playsinline></video>
+        </div>
+        <div class="meta">
+          <div class="meta-info">
+            <div class="meta-title" id="title"></div>
+            <div class="meta-sub" id="sub"></div>
+          </div>
+          <a class="btn-save" id="saveLink" href="#" target="_blank" rel="noopener">Save ↓</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Powered by yt-dlp</div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('url');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const btnText = document.getElementById('btnText');
+    const errorEl = document.getElementById('error');
+    const resultEl = document.getElementById('result');
+    const preview = document.getElementById('preview');
+    const titleEl = document.getElementById('title');
+    const subEl = document.getElementById('sub');
+    const saveLink = document.getElementById('saveLink');
+
+    const IG_RE = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[\w-]+/;
+
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        urlInput.value = text.trim();
+        urlInput.focus();
+      } catch {
+        urlInput.focus();
+      }
+    });
+
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') downloadBtn.click();
+    });
+
+    downloadBtn.addEventListener('click', extract);
+
+    async function extract() {
+      const url = urlInput.value.trim();
+      hideError();
+      resultEl.classList.remove('show');
+
+      if (!IG_RE.test(url)) {
+        showError('Please enter a valid Instagram post or reel URL.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await fetch('/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || 'Something went wrong. Try again.');
+          return;
+        }
+
+        if (!data.url) {
+          showError('No video found at this URL. It may be a photo post.');
+          return;
+        }
+
+        showResult(data);
+      } catch (err) {
+        showError('Network error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function showResult(data) {
+      preview.src = data.url;
+      preview.poster = data.thumbnail || '';
+      preview.load();
+
+      titleEl.textContent = data.uploader || 'Instagram Video';
+
+      const parts = [];
+      if (data.duration) parts.push(formatDuration(data.duration));
+      if (data.filesize) parts.push(formatBytes(data.filesize));
+      subEl.textContent = parts.join(' · ') || '';
+
+      saveLink.href = data.url;
+
+      resultEl.classList.add('show');
+    }
+
+    function formatDuration(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    function formatBytes(b) {
+      if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+      if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+      return b + ' B';
+    }
+
+    function setLoading(on) {
+      downloadBtn.disabled = on;
+      btnText.innerHTML = on
+        ? '<span class="spinner"></span>Extracting…'
+        : 'Get Video';
+    }
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.classList.add('show');
+    }
+
+    function hideError() {
+      errorEl.classList.remove('show');
+    }
+  </script>
+</body>
+</html>
