@@ -7,6 +7,13 @@ import tempfile
 from collections.abc import Callable
 from typing import Any
 
+# YouTube often serves DASH (separate video/audio); strict best[ext=mp4] fails on many clients.
+# extract_info(download=False): merged selection still yields per-stream URLs in formats.
+FORMAT_FOR_URL_EXTRACTION = "bestvideo*+bestaudio/best/worst"
+
+# Prefer progressive MP4 when possible so CLI download works without ffmpeg; then DASH fallbacks.
+FORMAT_FOR_FILE_DOWNLOAD = "best[ext=mp4]/best/bestvideo*+bestaudio/best/worst"
+
 
 def _prepare_cookiefile_from_env() -> tuple[str | None, Callable[[], None]]:
     """
@@ -59,7 +66,8 @@ def merge_youtube_opts(base: dict[str, Any]) -> tuple[dict[str, Any], Callable[[
     existing = dict(opts.get("extractor_args") or {})
     yt = dict(existing.get("youtube") or {})
     if "player_client" not in yt:
-        yt["player_client"] = ["android", "web", "ios"]
+        # "web" exposes more progressive formats; android helps on bot-prone IPs.
+        yt["player_client"] = ["web", "android"]
     existing["youtube"] = yt
     opts["extractor_args"] = existing
 

@@ -10,7 +10,7 @@ if str(_api_dir) not in sys.path:
     sys.path.insert(0, str(_api_dir))
 
 from media_urls import is_supported_url, normalize_url
-from ydl_helpers import merge_youtube_opts
+from ydl_helpers import FORMAT_FOR_FILE_DOWNLOAD, merge_youtube_opts
 
 
 DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "downloads")
@@ -70,7 +70,7 @@ def download_video(
 
     opts: dict = {
         "outtmpl": outtmpl,
-        "format": "best",
+        "format": FORMAT_FOR_FILE_DOWNLOAD,
         "merge_output_format": "mp4",
         "quiet": quiet,
         "no_warnings": quiet,

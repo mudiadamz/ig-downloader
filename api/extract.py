@@ -11,7 +11,7 @@ if _api_dir not in sys.path:
 import yt_dlp
 
 from media_urls import is_supported_url, normalize_url
-from ydl_helpers import merge_youtube_opts
+from ydl_helpers import FORMAT_FOR_URL_EXTRACTION, merge_youtube_opts
 
 
 class handler(BaseHTTPRequestHandler):
@@ -36,7 +36,7 @@ class handler(BaseHTTPRequestHandler):
         base_opts = {
             "quiet": True,
             "no_warnings": True,
-            "format": "best[ext=mp4]/best",
+            "format": FORMAT_FOR_URL_EXTRACTION,
             "socket_timeout": 15,
         }
         opts, cookie_cleanup = merge_youtube_opts(base_opts)
