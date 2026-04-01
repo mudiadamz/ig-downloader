@@ -11,6 +11,7 @@ if _api_dir not in sys.path:
 import yt_dlp
 
 from media_urls import is_supported_url, normalize_url
+from ydl_helpers import merge_youtube_opts
 
 
 class handler(BaseHTTPRequestHandler):
@@ -32,12 +33,13 @@ class handler(BaseHTTPRequestHandler):
 
         url = normalize_url(url)
 
-        opts = {
+        base_opts = {
             "quiet": True,
             "no_warnings": True,
             "format": "best[ext=mp4]/best",
             "socket_timeout": 15,
         }
+        opts, cookie_cleanup = merge_youtube_opts(base_opts)
 
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -75,11 +77,27 @@ class handler(BaseHTTPRequestHandler):
 
         except yt_dlp.utils.DownloadError as exc:
             msg = str(exc)
-            if "login" in msg.lower() or "private" in msg.lower():
+            low = msg.lower()
+            if "login" in low or "private" in low:
                 return self._json(403, {"error": "This post is private or requires login"})
+            if "sign in" in low and "bot" in low:
+                return self._json(
+                    503,
+                    {
+                        "error": (
+                            "YouTube blocked this server (bot check). "
+                            "Add Netscape cookies: set env YT_DLP_COOKIES (file contents) or "
+                            "YT_DLP_COOKIE_FILE on Vercel, or run download.py locally with "
+                            "--cookies or --cookies-from-browser. "
+                            "See yt-dlp wiki: exporting YouTube cookies."
+                        ),
+                    },
+                )
             return self._json(500, {"error": f"Extraction failed: {msg}"})
         except Exception as exc:
             return self._json(500, {"error": f"Unexpected error: {exc}"})
+        finally:
+            cookie_cleanup()
 
     def _json(self, status: int, data: dict):
         self.send_response(status)

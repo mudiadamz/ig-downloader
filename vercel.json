@@ -4,7 +4,7 @@
   "installCommand": "",
   "functions": {
     "api/extract.py": {
-      "includeFiles": "api/media_urls.py"
+      "includeFiles": "api/{media_urls,ydl_helpers}.py"
     }
   }
 }
