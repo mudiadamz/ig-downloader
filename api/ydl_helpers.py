@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import os
 import tempfile
 from collections.abc import Callable
@@ -31,6 +32,12 @@ def _prepare_cookiefile_from_env() -> tuple[str | None, Callable[[], None]]:
     raw = os.environ.get("YT_DLP_COOKIES", "").strip()
     if not raw:
         return None, lambda: None
+
+    if not raw.startswith("#"):
+        try:
+            raw = base64.b64decode(raw).decode("utf-8")
+        except Exception:
+            pass
 
     fd, path = tempfile.mkstemp(suffix="_yt_dlp_cookies.txt", text=True)
     try:
