@@ -1,5 +1,12 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import os
+import sys
+
+# Vercel runs this file without adding api/ to sys.path; sibling modules won't resolve.
+_api_dir = os.path.dirname(os.path.abspath(__file__))
+if _api_dir not in sys.path:
+    sys.path.insert(0, _api_dir)
 
 import yt_dlp
 

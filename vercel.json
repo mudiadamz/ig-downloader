@@ -1,5 +1,10 @@
 {
   "framework": null,
   "buildCommand": "",
-  "installCommand": ""
+  "installCommand": "",
+  "functions": {
+    "api/extract.py": {
+      "includeFiles": "api/media_urls.py"
+    }
+  }
 }
