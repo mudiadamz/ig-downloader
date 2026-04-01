@@ -1,31 +1,9 @@
 from http.server import BaseHTTPRequestHandler
 import json
-import re
 
 import yt_dlp
 
-IG_RE = re.compile(
-    r"https?://(?:www\.)?instagram\.com/(?:p|reel|reels|tv)/[\w-]+"
-)
-
-TIKTOK_RE = re.compile(
-    r"https?://(?:www\.|m\.)?tiktok\.com/@[\w.-]+/video/\d+"
-    r"|https?://(?:vm|vt)\.tiktok\.com/[\w-]+"
-    r"|https?://(?:www\.|m\.)?tiktok\.com/t/[\w-]+"
-)
-
-
-def normalize_url(url: str) -> str:
-    u = url.strip()
-    for sep in ("?", "#"):
-        if sep in u:
-            u = u.split(sep, 1)[0]
-    return u.rstrip("/")
-
-
-def is_supported_url(url: str) -> bool:
-    u = normalize_url(url)
-    return bool(IG_RE.match(u)) or bool(TIKTOK_RE.match(u))
+from media_urls import is_supported_url, normalize_url
 
 
 class handler(BaseHTTPRequestHandler):
@@ -40,8 +18,12 @@ class handler(BaseHTTPRequestHandler):
         if not is_supported_url(url):
             return self._json(
                 400,
-                {"error": "Invalid URL. Use an Instagram post/reel or TikTok video link."},
+                {
+                    "error": "Invalid URL. Use an Instagram post/reel or YouTube video link.",
+                },
             )
+
+        url = normalize_url(url)
 
         opts = {
             "quiet": True,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IG & TikTok Video Downloader</title>
+  <title>IG & YouTube Video Downloader</title>
   <style>
     :root {
       --bg: #000;
@@ -238,13 +238,13 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>IG & TikTok Downloader</h1>
-      <p>Paste an Instagram post, reel, or TikTok video link</p>
+      <h1>IG & YouTube Downloader</h1>
+      <p>Paste an Instagram post, reel, or YouTube video link</p>
     </div>
 
     <div class="card">
       <div class="input-group">
-        <input type="text" id="url" placeholder="Instagram or TikTok URL…" autocomplete="off" spellcheck="false">
+        <input type="text" id="url" placeholder="Instagram or YouTube URL…" autocomplete="off" spellcheck="false">
         <button class="btn-paste" id="pasteBtn">Paste</button>
       </div>
 
@@ -289,22 +289,54 @@
     let currentFilename = 'video.mp4';
 
     const IG_RE = /^https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|reels|tv)\/[\w-]+$/;
-    const TIKTOK_RE = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/video\/\d+$|^https?:\/\/(?:vm|vt)\.tiktok\.com\/[\w-]+\/?$|^https?:\/\/(?:www\.|m\.)?tiktok\.com\/t\/[\w-]+\/?$/;
+    const YOUTUBE_RE = /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[\w-]{11}$/;
 
     function normalizeUrlInput(u) {
-      let s = u.trim();
-      const q = s.indexOf('?');
-      const h = s.indexOf('#');
-      let end = s.length;
+      const s = u.trim();
+      try {
+        const url = new URL(s);
+        const host = url.hostname.toLowerCase();
+        if (host === 'youtu.be') {
+          const vid = url.pathname.replace(/^\//, '').split('/')[0];
+          if (/^[\w-]{11}$/.test(vid)) {
+            return `https://www.youtube.com/watch?v=${vid}`;
+          }
+        }
+        if (host.includes('youtube.com')) {
+          const path = url.pathname;
+          if (path.startsWith('/shorts/')) {
+            const vid = path.split('/')[2]?.split('?')[0];
+            if (vid && /^[\w-]{11}$/.test(vid)) {
+              return `https://www.youtube.com/watch?v=${vid}`;
+            }
+          }
+          if (path.startsWith('/embed/') || path.startsWith('/v/')) {
+            const vid = path.split('/')[2]?.split('?')[0];
+            if (vid && /^[\w-]{11}$/.test(vid)) {
+              return `https://www.youtube.com/watch?v=${vid}`;
+            }
+          }
+          if (path === '/watch' || path.startsWith('/watch')) {
+            const v = url.searchParams.get('v');
+            if (v && /^[\w-]{11}$/.test(v)) {
+              return `https://www.youtube.com/watch?v=${v}`;
+            }
+          }
+        }
+      } catch (_) { /* fall through */ }
+      let out = s;
+      const q = out.indexOf('?');
+      const h = out.indexOf('#');
+      let end = out.length;
       if (q >= 0) end = Math.min(end, q);
       if (h >= 0) end = Math.min(end, h);
-      s = s.slice(0, end).replace(/\/$/, '');
-      return s;
+      out = out.slice(0, end).replace(/\/$/, '');
+      return out;
     }
 
     function isSupportedUrl(raw) {
       const u = normalizeUrlInput(raw);
-      return IG_RE.test(u) || TIKTOK_RE.test(u);
+      return IG_RE.test(u) || YOUTUBE_RE.test(u);
     }
 
     pasteBtn.addEventListener('click', async () => {
@@ -324,15 +356,16 @@
     downloadBtn.addEventListener('click', extract);
 
     async function extract() {
-      const url = urlInput.value.trim();
+      const raw = urlInput.value.trim();
       hideError();
       resultEl.classList.remove('show');
 
-      if (!isSupportedUrl(url)) {
-        showError('Please enter a valid Instagram post/reel or TikTok video URL.');
+      if (!isSupportedUrl(raw)) {
+        showError('Please enter a valid Instagram post/reel or YouTube video URL.');
         return;
       }
 
+      const url = normalizeUrlInput(raw);
       setLoading(true);
 
       try {

@@ -1,42 +1,28 @@
 import sys
 import os
-import re
 import argparse
-from datetime import datetime
+from pathlib import Path
 
 import yt_dlp
+
+_api_dir = Path(__file__).resolve().parent / "api"
+if str(_api_dir) not in sys.path:
+    sys.path.insert(0, str(_api_dir))
+
+from media_urls import is_supported_url, normalize_url
 
 
 DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "downloads")
 
-IG_URL_PATTERN = re.compile(
-    r"https?://(?:www\.)?instagram\.com/"
-    r"(?:p|reel|reels|tv)/([A-Za-z0-9_-]+)"
-)
-
-TIKTOK_URL_PATTERN = re.compile(
-    r"https?://(?:www\.|m\.)?tiktok\.com/@[\w.-]+/video/\d+"
-    r"|https?://(?:vm|vt)\.tiktok\.com/[\w-]+"
-    r"|https?://(?:www\.|m\.)?tiktok\.com/t/[\w-]+"
-)
-
-
-def normalize_url_for_validate(url: str) -> str:
-    u = url.strip()
-    for sep in ("?", "#"):
-        if sep in u:
-            u = u.split(sep, 1)[0]
-    return u.rstrip("/")
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Download Instagram and TikTok videos",
+        description="Download Instagram and YouTube videos",
     )
     parser.add_argument(
         "urls",
         nargs="+",
-        help="Instagram post/reel or TikTok video URLs",
+        help="Instagram post/reel or YouTube video URLs",
     )
     parser.add_argument(
         "-o", "--output-dir",
@@ -52,11 +38,7 @@ def parse_args():
 
 
 def validate_url(url: str) -> bool:
-    u = normalize_url_for_validate(url)
-    return (
-        IG_URL_PATTERN.search(u) is not None
-        or TIKTOK_URL_PATTERN.search(u) is not None
-    )
+    return is_supported_url(url)
 
 
 def download_video(url: str, output_dir: str, quiet: bool = False) -> str | None:
@@ -96,7 +78,7 @@ def main():
 
     invalid = [u for u in args.urls if not validate_url(u)]
     if invalid:
-        print("[ERROR] Invalid URL(s) — need Instagram or TikTok video links:", file=sys.stderr)
+        print("[ERROR] Invalid URL(s) — need Instagram or YouTube video links:", file=sys.stderr)
         for u in invalid:
             print(f"  - {u}", file=sys.stderr)
         sys.exit(1)
@@ -106,8 +88,9 @@ def main():
     results = {"ok": [], "fail": []}
 
     for i, url in enumerate(args.urls, 1):
-        print(f"[{i}/{len(args.urls)}] {url}")
-        path = download_video(url, args.output_dir, quiet=args.quiet)
+        norm = normalize_url(url.strip())
+        print(f"[{i}/{len(args.urls)}] {norm}")
+        path = download_video(norm, args.output_dir, quiet=args.quiet)
         if path:
             size_mb = os.path.getsize(path) / (1024 * 1024)
             print(f"  -> Saved: {path} ({size_mb:.1f} MB)\n")
