@@ -1,17 +1,15 @@
 from http.server import BaseHTTPRequestHandler
 import json
-import os
 import sys
 
-# Vercel runs this file without adding api/ to sys.path; sibling modules won't resolve.
-_api_dir = os.path.dirname(os.path.abspath(__file__))
+_api_dir = __import__("os").path.dirname(__import__("os").path.abspath(__file__))
 if _api_dir not in sys.path:
     sys.path.insert(0, _api_dir)
 
 import yt_dlp
 
 from media_urls import is_supported_url, normalize_url
-from ydl_helpers import FORMAT_FOR_URL_EXTRACTION, merge_youtube_opts
+from ydl_helpers import FORMAT_FOR_URL_EXTRACTION
 
 
 class handler(BaseHTTPRequestHandler):
@@ -26,20 +24,17 @@ class handler(BaseHTTPRequestHandler):
         if not is_supported_url(url):
             return self._json(
                 400,
-                {
-                    "error": "Invalid URL. Use an Instagram post/reel or YouTube video link.",
-                },
+                {"error": "Invalid URL. Paste an Instagram post or reel link."},
             )
 
         url = normalize_url(url)
 
-        base_opts = {
+        opts = {
             "quiet": True,
             "no_warnings": True,
             "format": FORMAT_FOR_URL_EXTRACTION,
             "socket_timeout": 15,
         }
-        opts, cookie_cleanup = merge_youtube_opts(base_opts)
 
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -77,34 +72,11 @@ class handler(BaseHTTPRequestHandler):
 
         except yt_dlp.utils.DownloadError as exc:
             msg = str(exc)
-            low = msg.lower()
-            if "login" in low or "private" in low:
+            if "login" in msg.lower() or "private" in msg.lower():
                 return self._json(403, {"error": "This post is private or requires login"})
-            if "sign in" in low and "bot" in low:
-                has_cookie_env = bool(os.environ.get("YT_DLP_COOKIES", "").strip())
-                has_cookiefile = "cookiefile" in opts
-                return self._json(
-                    503,
-                    {
-                        "error": (
-                            "YouTube blocked this server (bot check). "
-                            "Add Netscape cookies: set env YT_DLP_COOKIES (file contents) or "
-                            "YT_DLP_COOKIE_FILE on Vercel, or run download.py locally with "
-                            "--cookies or --cookies-from-browser. "
-                            "See yt-dlp wiki: exporting YouTube cookies."
-                        ),
-                        "debug": {
-                            "cookie_env_set": has_cookie_env,
-                            "cookiefile_in_opts": has_cookiefile,
-                            "yt_dlp_version": yt_dlp.version.__version__,
-                        },
-                    },
-                )
             return self._json(500, {"error": f"Extraction failed: {msg}"})
         except Exception as exc:
             return self._json(500, {"error": f"Unexpected error: {exc}"})
-        finally:
-            cookie_cleanup()
 
     def _json(self, status: int, data: dict):
         self.send_response(status)
