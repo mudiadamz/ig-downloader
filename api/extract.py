@@ -81,6 +81,8 @@ class handler(BaseHTTPRequestHandler):
             if "login" in low or "private" in low:
                 return self._json(403, {"error": "This post is private or requires login"})
             if "sign in" in low and "bot" in low:
+                has_cookie_env = bool(os.environ.get("YT_DLP_COOKIES", "").strip())
+                has_cookiefile = "cookiefile" in opts
                 return self._json(
                     503,
                     {
@@ -91,6 +93,11 @@ class handler(BaseHTTPRequestHandler):
                             "--cookies or --cookies-from-browser. "
                             "See yt-dlp wiki: exporting YouTube cookies."
                         ),
+                        "debug": {
+                            "cookie_env_set": has_cookie_env,
+                            "cookiefile_in_opts": has_cookiefile,
+                            "yt_dlp_version": yt_dlp.version.__version__,
+                        },
                     },
                 )
             return self._json(500, {"error": f"Extraction failed: {msg}"})
