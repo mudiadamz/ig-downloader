@@ -1,12 +1,12 @@
 # IG Downloader
 
-Small tools to extract and download Instagram (and, via the CLI, YouTube) video using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+Small tools to extract and download Instagram video using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
-## What’s included
+## What's included
 
 - **Web UI** (`index.html`) — Paste an Instagram post, reel, or TV URL. The page calls a serverless API to resolve a direct video URL, then previews it and lets you save it in the browser.
 - **API** (`api/extract.py`) — Vercel Python function: `POST /api/extract` with JSON `{ "url": "<instagram url>" }`. Returns metadata and a playable URL when extraction succeeds.
-- **CLI** (`download.py`) — Download one or more videos to disk. Supports **Instagram** (`/p/`, `/reel/`, `/reels/`, `/tv/`) and **YouTube** (watch, shorts, youtu.be, embed). Output defaults to a `downloads/` folder next to the script.
+- **CLI** (`download.py`) — Download one or more Instagram videos to disk. Supports `/p/`, `/reel/`, `/reels/`, and `/tv/` URLs. Output defaults to a `downloads/` folder next to the script.
 
 ## Requirements
 
@@ -21,11 +21,11 @@ pip install -r requirements.txt
 
 ```bash
 python download.py "https://www.instagram.com/reel/VIDEO_ID/"
-python download.py "https://www.youtube.com/watch?v=VIDEO_ID" -o ./my-downloads
 python download.py URL1 URL2 --quiet
+python download.py URL -o ./my-downloads
 ```
 
-Optional cookie helpers (when sites block or rate-limit):
+Optional cookie helpers (when Instagram blocks or rate-limits):
 
 ```bash
 python download.py URL --cookies cookies.txt
